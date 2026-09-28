@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <title>Darts Counter</title>
+  <meta name="description" content="Darts scoreboard with checkout help and a cheerful announcer.">
+  <meta name="theme-color" content="#0b0f0c">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Darts">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main id="game" class="board-wrap" hidden>
+    <section class="board" aria-label="Scoreboard">
+      <header class="strip">
+        <div class="strip-side left"><span>LEGS</span><span class="team-label">HOME</span><span>SETS</span></div>
+        <div class="emblem">
+          <svg viewBox="0 0 100 100" aria-hidden="true" id="emblem-board"></svg>
+        </div>
+        <div class="strip-side right"><span>SETS</span><span class="team-label">AWAY</span><span>LEGS</span></div>
+      </header>
+
+      <div class="quick-toggles">
+        <button type="button" class="chip" id="toggle-help" aria-pressed="false">HELP ME</button>
+        <button type="button" class="chip" id="toggle-voice" aria-pressed="false">VOICE</button>
+      </div>
+
+      <div class="main">
+        <div class="side" data-side="0">
+          <div class="legs-sets">
+            <div class="led small" data-led="legs"></div>
+            <span class="dot"></span>
+            <div class="led small" data-led="sets"></div>
+          </div>
+          <div class="nametag"><span class="team-name"></span><span class="members"></span></div>
+          <div class="led big" data-led="score"></div>
+          <div class="side-hint"></div>
+          <button type="button" class="btn green pill enter" data-action="enter">ENTER</button>
+        </div>
+
+        <div class="centre">
+          <div class="entry-wrap">
+            <div class="led mid" id="entry"></div>
+            <div class="pending" id="pending"></div>
+          </div>
+          <div class="checkout-hint" id="checkout-hint" aria-live="polite"></div>
+          <div class="keypad" id="keypad">
+            <button type="button" class="btn green key" data-key="1">1</button>
+            <button type="button" class="btn green key" data-key="2">2</button>
+            <button type="button" class="btn green key" data-key="3">3</button>
+            <button type="button" class="btn green key" data-key="4">4</button>
+            <button type="button" class="btn green key" data-key="5">5</button>
+            <button type="button" class="btn green key" data-key="6">6</button>
+            <button type="button" class="btn green key" data-key="7">7</button>
+            <button type="button" class="btn green key" data-key="8">8</button>
+            <button type="button" class="btn green key" data-key="9">9</button>
+            <button type="button" class="btn green key zero" data-key="0">0</button>
+          </div>
+        </div>
+
+        <div class="side" data-side="1">
+          <div class="legs-sets">
+            <div class="led small" data-led="sets"></div>
+            <span class="dot"></span>
+            <div class="led small" data-led="legs"></div>
+          </div>
+          <div class="nametag"><span class="team-name"></span><span class="members"></span></div>
+          <div class="led big" data-led="score"></div>
+          <div class="side-hint"></div>
+          <button type="button" class="btn green pill enter" data-action="enter">ENTER</button>
+        </div>
+      </div>
+
+      <footer class="functions">
+        <button type="button" class="btn green fn" data-action="handicap">H/C</button>
+        <button type="button" class="btn green fn" data-action="clear">CLEAR</button>
+        <button type="button" class="btn green fn" data-action="average">AVERAGE</button>
+        <button type="button" class="btn green fn mode" data-action="mode">MODE</button>
+        <button type="button" class="btn green fn" data-action="recall">RECALL</button>
+        <button type="button" class="btn green fn" data-action="undo">UNDO</button>
+        <button type="button" class="btn green fn" data-action="add">ADD</button>
+      </footer>
+    </section>
+    <div class="toast" id="toast" role="status" aria-live="assertive"></div>
+    <div class="celebrate" id="celebrate" aria-hidden="true"></div>
+  </main>
+
+  <!-- Game setup -->
+  <main id="setup" class="setup">
+    <form class="card" id="setup-form" autocomplete="off">
+      <h1>Darts Counter</h1>
+
+      <fieldset>
+        <legend>Game</legend>
+        <div class="segmented" data-name="mode">
+          <label><input type="radio" name="mode" value="solo"><span>Solo</span></label>
+          <label><input type="radio" name="mode" value="two" checked><span>2 players</span></label>
+          <label><input type="radio" name="mode" value="doubles"><span>Doubles</span></label>
+          <label><input type="radio" name="mode" value="practice"><span>Checkout practice</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset id="start-field">
+        <legend>Start from</legend>
+        <div class="segmented">
+          <label><input type="radio" name="start" value="501" checked><span>501</span></label>
+          <label><input type="radio" name="start" value="401"><span>401</span></label>
+          <label><input type="radio" name="start" value="301"><span>301</span></label>
+          <label><input type="radio" name="start" value="201"><span>201</span></label>
+          <label><input type="radio" name="start" value="101"><span>101</span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Names <small>(optional)</small></legend>
+        <div class="names" id="names"></div>
+      </fieldset>
+
+      <fieldset id="match-field">
+        <legend>Match</legend>
+        <div class="row">
+          <label class="field">Legs to win a set
+            <select name="legsPerSet"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
+          </label>
+          <label class="field">Sets to win the match
+            <select name="setsToWin"><option selected>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>7</option></select>
+          </label>
+        </div>
+        <div class="row" id="handicap-row"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Options</legend>
+        <label class="switch"><input type="checkbox" name="help" checked><span></span>“Help me” checkout suggestions</label>
+        <label class="switch"><input type="checkbox" name="voice" checked><span></span>Announcer voice</label>
+        <div class="row bg-row">
+          <label class="btn ghost file-btn">Choose background image<input type="file" accept="image/*" id="bg-file" hidden></label>
+          <button type="button" class="btn ghost" id="bg-clear">Use default background</button>
+        </div>
+      </fieldset>
+
+      <div class="setup-actions">
+        <button type="button" class="btn ghost" id="resume" hidden>Back to current game</button>
+        <button type="submit" class="btn green pill big-go">GAME ON!</button>
+      </div>
+    </form>
+  </main>
+
+  <!-- Pop-ups -->
+  <dialog id="dlg-darts" class="dlg">
+    <h2>Game shot! How many darts?</h2>
+    <p>Used to work out your averages.</p>
+    <div class="dlg-row">
+      <button type="button" class="btn green key" data-darts="1">1</button>
+      <button type="button" class="btn green key" data-darts="2">2</button>
+      <button type="button" class="btn green key" data-darts="3">3</button>
+    </div>
+    <button type="button" class="btn ghost" data-close>Cancel</button>
+  </dialog>
+
+  <dialog id="dlg-info" class="dlg wide">
+    <h2 id="info-title"></h2>
+    <div id="info-body"></div>
+    <button type="button" class="btn green pill" data-close>Close</button>
+  </dialog>
+
+  <dialog id="dlg-mode" class="dlg">
+    <h2>Menu</h2>
+    <div class="menu">
+      <button type="button" class="btn green" data-menu="rematch">New game, same players</button>
+      <button type="button" class="btn green" data-menu="setup">Change game settings</button>
+      <button type="button" class="btn green" data-menu="outs">Checkout table</button>
+      <label class="btn green file-btn">Change background<input type="file" accept="image/*" id="bg-file-2" hidden></label>
+      <button type="button" class="btn green" data-menu="fullscreen" id="menu-fullscreen">Full screen</button>
+    </div>
+    <button type="button" class="btn ghost" data-close>Close</button>
+  </dialog>
+
+  <dialog id="dlg-winner" class="dlg">
+    <h2 id="winner-title"></h2>
+    <p id="winner-body"></p>
+    <div class="menu">
+      <button type="button" class="btn green pill" data-menu="rematch">Play again</button>
+      <button type="button" class="btn ghost" data-menu="undo">Undo last score</button>
+      <button type="button" class="btn ghost" data-menu="setup">New setup</button>
+    </div>
+  </dialog>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
