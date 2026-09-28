@@ -16,6 +16,12 @@
   <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+  <div class="splash" id="splash" aria-label="Albie Eye">
+    <div class="splash-logo">
+      <img src="img/logo.png" alt="Albie Eye darts logo">
+      <span class="eyelid"></span>
+    </div>
+  </div>
   <main id="game" class="board-wrap" hidden>
     <section class="board" aria-label="Scoreboard">
       <header class="strip">
@@ -147,14 +153,15 @@
 
       <fieldset id="match-field">
         <legend>Match</legend>
-        <div class="row match-row" id="match-row">
-          <label class="field">Legs to win a set
-            <select name="legsPerSet"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
-          </label>
-          <label class="field">Sets to win the match
-            <select name="setsToWin"><option selected>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>7</option></select>
-          </label>
+        <div class="match-grid">
+          <div class="field">Legs to win a set
+            <div class="segmented six"><label><input type="radio" name="legsPerSet" value="1"><span>1</span></label><label><input type="radio" name="legsPerSet" value="2"><span>2</span></label><label><input type="radio" name="legsPerSet" value="3" checked><span>3</span></label><label><input type="radio" name="legsPerSet" value="4"><span>4</span></label><label><input type="radio" name="legsPerSet" value="5"><span>5</span></label><label><input type="radio" name="legsPerSet" value="6"><span>6</span></label></div>
+          </div>
+          <div class="field">Sets to win the match
+            <div class="segmented six"><label><input type="radio" name="setsToWin" value="1" checked><span>1</span></label><label><input type="radio" name="setsToWin" value="2"><span>2</span></label><label><input type="radio" name="setsToWin" value="3"><span>3</span></label><label><input type="radio" name="setsToWin" value="4"><span>4</span></label><label><input type="radio" name="setsToWin" value="5"><span>5</span></label><label><input type="radio" name="setsToWin" value="7"><span>7</span></label></div>
+          </div>
         </div>
+        <div class="hc-row" id="hc-row"></div>
       </fieldset>
 
 
@@ -174,6 +181,11 @@
     <div class="settings-list">
       <label class="switch"><input type="checkbox" form="setup-form" name="help" checked><span></span>“Help me” checkout suggestions</label>
       <label class="switch"><input type="checkbox" form="setup-form" name="voice" checked><span></span>Announcer voice</label>
+      <div class="voice-row">
+        <select id="voice-select" aria-label="Announcer voice"></select>
+        <button type="button" class="btn green pill" id="voice-test">Test</button>
+      </div>
+      <p class="note">The most natural voices are listed first. For a better voice on iPad or iPhone, download one marked Enhanced or Premium in Settings › Accessibility › Spoken Content › Voices › English.</p>
       <div id="camera-options" class="settings-group">
         <label class="switch"><input type="checkbox" form="setup-form" name="camera"><span></span>Camera replay of the last shot and the crowd</label>
         <label class="switch"><input type="checkbox" form="setup-form" name="autoReplay" checked><span></span>Replay 180s and game shots automatically</label>
@@ -217,6 +229,26 @@
       <button type="button" class="btn green" data-menu="fullscreen" id="menu-fullscreen">Full screen</button>
     </div>
     <button type="button" class="btn ghost" data-close>Close</button>
+  </dialog>
+
+  <dialog id="dlg-num" class="dlg numpad-dlg">
+    <h2 id="num-title">Handicap</h2>
+    <p id="num-help">Points taken off the starting score.</p>
+    <div class="num-display" id="num-display">0</div>
+    <div class="numpad">
+      <button type="button" class="btn green key" data-num="1">1</button>
+      <button type="button" class="btn green key" data-num="2">2</button>
+      <button type="button" class="btn green key" data-num="3">3</button>
+      <button type="button" class="btn green key" data-num="4">4</button>
+      <button type="button" class="btn green key" data-num="5">5</button>
+      <button type="button" class="btn green key" data-num="6">6</button>
+      <button type="button" class="btn green key" data-num="7">7</button>
+      <button type="button" class="btn green key" data-num="8">8</button>
+      <button type="button" class="btn green key" data-num="9">9</button>
+      <button type="button" class="btn ghost key" data-num="del" aria-label="Delete">DEL</button>
+      <button type="button" class="btn green key" data-num="0">0</button>
+      <button type="button" class="btn green key ok" data-num="ok">OK</button>
+    </div>
   </dialog>
 
   <dialog id="dlg-quit" class="dlg">

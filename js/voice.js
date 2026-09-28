@@ -5,16 +5,35 @@ import { checkout, sayRoute } from './checkouts.js';
 const pick = (list) => list[Math.floor(Math.random() * list.length)];
 
 let voice = null;
-function chooseVoice() {
-  const voices = window.speechSynthesis?.getVoices() || [];
-  // British English voices first ("Daniel" on iPad is the best fit).
-  const gb = voices.filter((v) => /en[-_]GB/i.test(v.lang));
-  voice = gb.find((v) => /daniel/i.test(v.name)) || gb.find((v) => !/female|kate|serena|stephanie/i.test(v.name))
-    || gb[0] || voices.find((v) => /^en/i.test(v.lang)) || null;
+let preferredName = '';
+const NATURAL = /premium|enhanced|natural|neural|siri/i;
+const MALE_GB = /daniel|arthur|oliver|george|ryan|thomas|malcolm|harry/i;
+const NOVELTY = /albert|bad news|bahh|bells|boing|bubbles|cellos|deranged|good news|hysterical|jester|organ|superstar|trinoids|whisper|wobble|zarvox|fred|junior|ralph|grandpa|grandma|eddy|reed|rocko|sandy|shelley|flo/i;
+
+/** English voices on this device, the most natural-sounding British male ones first. */
+export function listVoices() {
+  const voices = (window.speechSynthesis?.getVoices() || []).filter((v) => /^en/i.test(v.lang) && !NOVELTY.test(v.name));
+  const score = (v) => (NATURAL.test(v.name) ? 8 : 0) + (/en[-_]GB/i.test(v.lang) ? 4 : 0) + (MALE_GB.test(v.name) ? 2 : 0) + (v.localService ? 1 : 0);
+  return voices.sort((a, b) => score(b) - score(a) || a.name.localeCompare(b.name));
 }
+
+function chooseVoice() {
+  const voices = listVoices();
+  voice = voices.find((v) => v.name === preferredName) || voices[0] || null;
+}
+
+export function setVoice(name) {
+  preferredName = name || '';
+  chooseVoice();
+}
+
+export function onVoicesChanged(fn) {
+  window.speechSynthesis?.addEventListener?.('voiceschanged', fn);
+}
+
 if (typeof window !== 'undefined' && window.speechSynthesis) {
   chooseVoice();
-  window.speechSynthesis.onvoiceschanged = chooseVoice;
+  window.speechSynthesis.addEventListener?.('voiceschanged', chooseVoice);
 }
 
 export const voiceAvailable = () => typeof window !== 'undefined' && 'speechSynthesis' in window;
@@ -30,8 +49,9 @@ export function say(lines) {
     u.lang = voice?.lang || 'en-GB';
     u.volume = 1;
     const shout = /!$/.test(line);
-    u.rate = shout ? 1.08 : 1.02;
-    u.pitch = shout ? 1.35 : 1.15;
+    // Small lifts only: big pitch changes are what make device voices sound robotic.
+    u.rate = shout ? 1.06 : 1;
+    u.pitch = shout ? 1.1 : 1;
     synth.speak(u);
   }
 }
@@ -92,10 +112,9 @@ export function announcement(outcome, playerName, next, opts = {}) {
       lines.push(`${next.name}, your next target is ${next.remaining}.`);
       if (opts.help && route) lines.push(`That's ${sayRoute(route)}.`);
     } else if (route) {
-      lines.push(`${next.name}, you require ${next.remaining}.`);
-      if (opts.help) lines.push(`That's ${sayRoute(route)}!`);
-    } else {
-      lines.push(`${next.name}, you've got ${next.remaining} left. Come on!`);
+      // Only call the remaining score when it can be checked out.
+      lines.push(`${next.name}, you have ${next.remaining} left.`);
+      if (opts.help) lines.push(`That's ${sayRoute(route)}.`);
     }
   }
   return lines;

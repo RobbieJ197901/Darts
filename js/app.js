@@ -4,7 +4,7 @@ import {
 } from './game.js';
 import { checkout, formatRoute, CHECKOUT_TABLE, BOGEY_NUMBERS } from './checkouts.js';
 import { renderLed } from './led.js';
-import { say, announcement, unlockSpeech, voiceAvailable } from './voice.js';
+import { say, announcement, unlockSpeech, voiceAvailable, listVoices, setVoice, onVoicesChanged } from './voice.js';
 import { cameraSupported, cameraOn, startCamera, stopCamera, grabReplay } from './replay.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
@@ -24,7 +24,7 @@ const store = {
 const DEFAULT_SETTINGS = {
   mode: 'two', start: 501, names: ['', '', '', ''], legsPerSet: 3, setsToWin: 1,
   handicaps: [0, 0], help: true, voice: true,
-  camera: false, autoReplay: true,
+  camera: false, autoReplay: true, voiceName: '',
 };
 let settings = { ...DEFAULT_SETTINGS, ...store.get('darts.settings', {}) };
 const saveSettings = () => store.set('darts.settings', settings);
@@ -125,24 +125,51 @@ function renderSetupFields() {
   $('#start-field').hidden = practice;
   $('#match-field').hidden = practice;
   const sides = mode === 'doubles' ? 2 : count;
-  const hc = $('#match-row');
-  $$('.hc-field', hc).forEach((el) => el.remove());
+  const hc = $('#hc-row');
+  hc.innerHTML = '';
   for (let s = 0; s < sides && !practice; s++) {
     const who = mode === 'doubles' ? (s === 0 ? 'Home team' : 'Away team') : `Player ${s + 1}`;
-    const label = document.createElement('label');
-    label.className = 'field hc-field';
-    label.textContent = `Handicap: ${who}`;
-    const input = document.createElement('input');
-    input.type = 'number';
-    input.inputMode = 'numeric';
-    input.min = 0;
-    input.max = 400;
-    input.step = 1;
-    input.value = settings.handicaps[s] || 0;
-    input.dataset.hc = s;
-    label.append(input);
-    hc.append(label);
+    const box = document.createElement('div');
+    box.className = 'field';
+    box.textContent = `Handicap: ${who}`;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'num-btn';
+    btn.dataset.hc = s;
+    btn.dataset.value = settings.handicaps[s] || 0;
+    btn.textContent = btn.dataset.value;
+    btn.addEventListener('click', async () => {
+      const v = await askNumber(`Handicap: ${who}`, +btn.dataset.value);
+      if (v !== null) { btn.dataset.value = v; btn.textContent = v; }
+    });
+    box.append(btn);
+    hc.append(box);
   }
+}
+
+/** Big on-screen keypad for typing a number. Resolves to the number, or null if cancelled. */
+function askNumber(title, current = 0, max = 400) {
+  const dlg = $('#dlg-num');
+  const display = $('#num-display');
+  $('#num-title').textContent = title;
+  let text = current ? String(current) : '';
+  const show = () => { display.textContent = text || '0'; };
+  show();
+  return new Promise((resolve) => {
+    let done = false;
+    const finish = (v) => { if (done) return; done = true; dlg.onclick = null; if (dlg.open) dlg.close(); resolve(v); };
+    dlg.onclick = (e) => {
+      if (e.target === dlg) return finish(null);
+      const k = e.target.closest('[data-num]')?.dataset.num;
+      if (!k) return;
+      if (k === 'ok') return finish(Math.min(max, +text || 0));
+      if (k === 'del') text = text.slice(0, -1);
+      else if (text.length < 3 && +(text + k) <= max) text = (text + k).replace(/^0+(?=\d)/, '');
+      show();
+    };
+    dlg.addEventListener('close', () => finish(null), { once: true });
+    dlg.showModal();
+  });
 }
 
 function fillSetup() {
@@ -163,7 +190,7 @@ function readSetup() {
   const names = [...settings.names];
   $$('#names input').forEach((i) => { names[+i.dataset.index] = i.value.trim(); });
   const handicaps = [0, 0];
-  $$('#match-row [data-hc]').forEach((i) => { handicaps[+i.dataset.hc] = Math.max(0, Math.min(400, Math.floor(+i.value || 0))); });
+  $$('#hc-row [data-hc]').forEach((b) => { handicaps[+b.dataset.hc] = Math.max(0, Math.min(400, Math.floor(+b.dataset.value || 0))); });
   settings = {
     ...settings,
     mode: setupForm.mode.value,
@@ -257,18 +284,20 @@ function render() {
   const running = pending.length ? pendingSum() + (typing ? +entry : 0) : null;
   entryLed.classList.toggle('dim', !typing && !pending.length);
   renderLed(entryLed, typing && !pending.length ? entry : running ?? lastScore ?? '', 3);
-  $('#pending').textContent = pending.length
-    ? `${pending.join(' + ')}${typing ? ' + ' + entry : ''} (${pending.length + (typing ? 1 : 0)} of 3 darts)`
-    : addMode ? 'Adding dart by dart' : '';
+  const pendingText = pending.length
+    ? `${pending.join(' + ')}${typing ? ' + ' + entry : ''} (${pending.length + (typing ? 1 : 0)} of 3)`
+    : addMode ? 'Dart by dart' : '';
 
+  // One line under the display: darts added so far, then the checkout suggestion.
   const hint = $('#checkout-hint');
-  hint.textContent = '';
+  hint.textContent = pendingText;
   if (settings.help && state.winner === null) {
     const remaining = currentSide(state).remaining - pendingSum();
     const dartsLeft = 3 - pending.length;
     const route = dartsLeft > 0 ? checkout(remaining, dartsLeft) : null;
-    if (route) hint.textContent = `${remaining}: ${formatRoute(route)}`;
-    else if (remaining <= 170 && remaining > 1 && BOGEY_NUMBERS.includes(remaining)) hint.textContent = `${remaining}: no out, set up`;
+    const tip = route ? `${remaining}: ${formatRoute(route)}`
+      : remaining <= 170 && remaining > 1 && BOGEY_NUMBERS.includes(remaining) ? `${remaining}: no out, set up` : '';
+    if (tip) hint.textContent = pendingText ? `${pendingText}  ·  ${formatRoute(route) || tip}` : tip;
   }
 
   $('[data-action="add"]').classList.toggle('on', addMode);
@@ -607,23 +636,22 @@ function showOuts() {
 
 function showHandicap() {
   if (state.practice) return reject('No handicaps in checkout practice');
-  const html = `<p>Points taken off the starting score. Changes apply from the next leg.</p><div class="hc-grid">${
-    state.sides.map((s, i) => `<label class="field">${esc(s.name)}<input type="number" inputmode="numeric" min="0" max="400" value="${s.handicap}" data-hc="${i}"></label>`).join('')
+  const html = `<p>Points taken off the starting score. Changes apply from the next leg.</p><div class="hc-row">${
+    state.sides.map((s, i) => `<div class="field">${esc(s.name)}<button type="button" class="num-btn" data-hc="${i}">${s.handicap}</button></div>`).join('')
   }</div>`;
   openInfo('Handicap', html);
-  $('#dlg-info').addEventListener('close', () => {
-    const inputs = $$('#info-body [data-hc]');
-    if (!inputs.length) return;
+  $$('#info-body [data-hc]').forEach((btn) => btn.addEventListener('click', async () => {
+    const i = +btn.dataset.hc;
+    const v = await askNumber(`Handicap: ${state.sides[i].name}`, state.sides[i].handicap);
+    if (v === null) return;
     const next = JSON.parse(JSON.stringify(state));
-    inputs.forEach((i) => {
-      const v = Math.max(0, Math.min(400, Math.floor(+i.value || 0)));
-      next.sides[+i.dataset.hc].handicap = v;
-      settings.handicaps[+i.dataset.hc] = v;
-    });
+    next.sides[i].handicap = v;
+    settings.handicaps[i] = v;
     state = next;
+    btn.textContent = v;
     saveSettings();
     saveMatch();
-  }, { once: true });
+  }));
 }
 
 function showWinner() {
@@ -718,6 +746,24 @@ function bind() {
     store.remove('darts.match');
     showSetup();
   });
+  const fillVoices = () => {
+    const sel = $('#voice-select');
+    const voices = listVoices();
+    sel.innerHTML = voices.map((v) => `<option value="${esc(v.name)}">${esc(v.name)} (${esc(v.lang)})</option>`).join('')
+      || '<option value="">Default voice</option>';
+    if (voices.some((v) => v.name === settings.voiceName)) sel.value = settings.voiceName;
+  };
+  fillVoices();
+  onVoicesChanged(fillVoices);
+  $('#voice-select').addEventListener('change', (e) => {
+    settings.voiceName = e.target.value;
+    setVoice(settings.voiceName);
+    saveSettings();
+  });
+  $('#voice-test').addEventListener('click', () => {
+    setVoice($('#voice-select').value);
+    say(['One hundred and eightyyyy!', 'Rob, you require 57. That\'s seventeen and then double top!']);
+  });
   $('#open-settings').addEventListener('click', () => $('#dlg-settings').showModal());
   $('#dlg-settings').addEventListener('close', () => {
     readSetup();
@@ -760,7 +806,24 @@ function bind() {
 }
 
 // ---------- Start up ----------
+function playIntro() {
+  const splash = $('#splash');
+  let finished = false;
+  const finish = () => {
+    if (finished) return;
+    finished = true;
+    splash.classList.add('done');
+    document.body.classList.add('logo-ready');
+    setTimeout(() => splash.remove(), 1000);
+  };
+  splash.addEventListener('click', finish);
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  setTimeout(finish, reduced ? 1200 : 3400);
+}
+
 function init() {
+  playIntro();
+  setVoice(settings.voiceName);
   drawEmblem();
   applyBackground();
   bind();

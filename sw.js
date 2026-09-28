@@ -1,8 +1,8 @@
 // Keeps the app working offline once it has been opened.
-const CACHE = 'darts-v5';
+const CACHE = 'darts-v7';
 const FILES = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
-  'js/app.js', 'js/game.js', 'js/checkouts.js', 'js/led.js', 'js/voice.js', 'js/replay.js', 'img/background.jpg',
+  'js/app.js', 'js/game.js', 'js/checkouts.js', 'js/led.js', 'js/voice.js', 'js/replay.js', 'img/background.jpg', 'img/logo.png',
   'icons/icon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/apple-touch-icon.png',
 ];
 
