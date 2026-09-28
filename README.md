@@ -16,6 +16,7 @@ A darts scoreboard for the iPad, styled like a classic electronic scorer: red LE
 - Averages per dart and per three darts, darts thrown this leg and last leg, 100+ and 180 counts, best checkout.
 - RECALL shows the last 80 scores.
 - H/C sets a handicap (points taken off a player's starting score).
+- Camera replay: keeps the last few seconds from the iPad camera and plays back the last shot and the crowd's reaction, automatically after 180s and game shots or with the REPLAY button. Footage never leaves the iPad.
 - Custom background image, remembered on the device.
 
 ## Installing on an iPad

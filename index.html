@@ -27,8 +27,14 @@
       </header>
 
       <div class="quick-toggles">
-        <button type="button" class="chip" id="toggle-help" aria-pressed="false">HELP ME</button>
-        <button type="button" class="chip" id="toggle-voice" aria-pressed="false">VOICE</button>
+        <div class="chip-group">
+          <button type="button" class="chip" id="toggle-help" aria-pressed="false">HELP ME</button>
+        </div>
+        <div class="chip-group">
+          <button type="button" class="chip replay-chip" id="replay-btn" hidden>▶ REPLAY</button>
+          <button type="button" class="chip" id="toggle-camera" aria-pressed="false">CAMERA</button>
+          <button type="button" class="chip" id="toggle-voice" aria-pressed="false">VOICE</button>
+        </div>
       </div>
 
       <div class="main">
@@ -89,6 +95,16 @@
     </section>
     <div class="toast" id="toast" role="status" aria-live="assertive"></div>
     <div class="celebrate" id="celebrate" aria-hidden="true"></div>
+    <video id="cam-preview" class="cam-preview" playsinline muted hidden></video>
+    <div class="replay" id="replay" hidden>
+      <div class="replay-label">REPLAY</div>
+      <video id="replay-video" playsinline></video>
+      <div class="replay-actions">
+        <button type="button" class="btn green pill" id="replay-slow">Slow-mo</button>
+        <button type="button" class="btn green pill" id="replay-again">Watch again</button>
+        <button type="button" class="btn green pill" id="replay-close">Close</button>
+      </div>
+    </div>
   </main>
 
   <!-- Game setup -->
@@ -139,6 +155,16 @@
         <legend>Options</legend>
         <label class="switch"><input type="checkbox" name="help" checked><span></span>“Help me” checkout suggestions</label>
         <label class="switch"><input type="checkbox" name="voice" checked><span></span>Announcer voice</label>
+        <div id="camera-options">
+          <label class="switch"><input type="checkbox" name="camera"><span></span>Camera replay of the last shot and the crowd</label>
+          <div class="row camera-row">
+            <label class="switch"><input type="checkbox" name="autoReplay" checked><span></span>Replay 180s and game shots automatically</label>
+            <label class="field">Camera
+              <select name="cameraFacing"><option value="user">Front (faces the players)</option><option value="environment">Back</option></select>
+            </label>
+          </div>
+          <p class="note">Footage stays on this iPad and only the last few seconds are kept.</p>
+        </div>
         <div class="row bg-row">
           <label class="btn ghost file-btn">Choose background image<input type="file" accept="image/*" id="bg-file" hidden></label>
           <button type="button" class="btn ghost" id="bg-clear">Use default background</button>

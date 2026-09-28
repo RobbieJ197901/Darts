@@ -5,6 +5,7 @@ import {
 import { checkout, formatRoute, CHECKOUT_TABLE, BOGEY_NUMBERS } from './checkouts.js';
 import { renderLed } from './led.js';
 import { say, announcement, unlockSpeech, voiceAvailable } from './voice.js';
+import { cameraSupported, cameraOn, startCamera, stopCamera, grabReplay } from './replay.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const $$ = (sel, root = document) => [...root.querySelectorAll(sel)];
@@ -23,6 +24,7 @@ const store = {
 const DEFAULT_SETTINGS = {
   mode: 'two', start: 501, names: ['', '', '', ''], legsPerSet: 3, setsToWin: 1,
   handicaps: [0, 0], help: true, voice: true,
+  camera: false, autoReplay: true, cameraFacing: 'user',
 };
 let settings = { ...DEFAULT_SETTINGS, ...store.get('darts.settings', {}) };
 const saveSettings = () => store.set('darts.settings', settings);
@@ -150,6 +152,10 @@ function fillSetup() {
   setupForm.setsToWin.value = String(settings.setsToWin);
   setupForm.help.checked = settings.help;
   setupForm.voice.checked = settings.voice;
+  setupForm.camera.checked = settings.camera;
+  setupForm.autoReplay.checked = settings.autoReplay;
+  setupForm.cameraFacing.value = settings.cameraFacing;
+  $('#camera-options').hidden = !cameraSupported();
   $$('#names input').forEach((i) => i.remove());
   renderSetupFields();
 }
@@ -169,6 +175,9 @@ function readSetup() {
     handicaps,
     help: setupForm.help.checked,
     voice: setupForm.voice.checked,
+    camera: setupForm.camera.checked,
+    autoReplay: setupForm.autoReplay.checked,
+    cameraFacing: setupForm.cameraFacing.value,
   };
   saveSettings();
 }
@@ -188,6 +197,7 @@ function startMatch() {
   saveMatch();
   $('#setup').hidden = true;
   $('#game').hidden = false;
+  syncCamera();
   render();
   if (settings.voice) {
     const p = currentPlayer(state);
@@ -267,6 +277,9 @@ function render() {
   $('#toggle-help').setAttribute('aria-pressed', String(settings.help));
   $('#toggle-voice').setAttribute('aria-pressed', String(settings.voice));
   $('#toggle-voice').hidden = !voiceAvailable();
+  $('#toggle-camera').hidden = !cameraSupported();
+  $('#toggle-camera').setAttribute('aria-pressed', String(cameraOn()));
+  $('#replay-btn').hidden = !cameraOn();
 }
 
 function clearEntry() {
@@ -446,7 +459,90 @@ function commit(total, darts) {
     say(announcement(outcome, player.name, nextPlayer, { help: settings.help }));
   }
 
-  if (outcome.matchWon) setTimeout(showWinner, 1800);
+  const big = outcome.score === 180 || outcome.legWon || (state.practice && outcome.kind === 'checkout');
+  if (big && settings.autoReplay && cameraOn()) autoReplay(outcome.matchWon);
+  else if (outcome.matchWon) setTimeout(showWinner, 1800);
+}
+
+// ---------- Camera replay ----------
+async function syncCamera() {
+  const preview = $('#cam-preview');
+  if (settings.camera && cameraSupported() && !cameraOn()) {
+    try {
+      await startCamera(settings.cameraFacing, preview);
+      preview.style.transform = settings.cameraFacing === 'user' ? 'scaleX(-1)' : 'none';
+      preview.hidden = false;
+    } catch (err) {
+      settings.camera = false;
+      saveSettings();
+      toast(err?.name === 'NotAllowedError'
+        ? 'Camera blocked. Allow it in Settings › Safari › Camera.'
+        : "Couldn't start the camera");
+    }
+  } else if (!settings.camera && cameraOn()) {
+    stopCamera(preview);
+    preview.hidden = true;
+  }
+  render();
+}
+
+let replayClips = [];
+let replayIndex = 0;
+let replayUrls = [];
+let afterReplay = null;
+
+async function showReplay(then = null) {
+  const clips = await grabReplay();
+  if (!clips.length) {
+    toast('Nothing recorded yet');
+    then?.();
+    return;
+  }
+  replayUrls.forEach((u) => URL.revokeObjectURL(u));
+  replayUrls = clips.map((c) => URL.createObjectURL(c));
+  replayClips = replayUrls;
+  afterReplay = then;
+  $('#replay').hidden = false;
+  playClip(0);
+}
+
+function playClip(i) {
+  const video = $('#replay-video');
+  replayIndex = i;
+  video.src = replayClips[i];
+  video.playbackRate = $('#replay-slow').classList.contains('on') ? 0.5 : 1;
+  video.onloadedmetadata = () => {
+    // With two clips, skip into the older one so the replay is about 15 seconds long.
+    if (i === 0 && replayClips.length > 1 && Number.isFinite(video.duration)) {
+      video.currentTime = Math.max(0, video.duration - 6);
+    }
+  };
+  video.onended = () => {
+    if (replayIndex + 1 < replayClips.length) playClip(replayIndex + 1);
+  };
+  video.play().catch(() => {});
+}
+
+function closeReplay() {
+  const video = $('#replay-video');
+  video.pause();
+  video.removeAttribute('src');
+  video.load();
+  $('#replay').hidden = true;
+  const then = afterReplay;
+  afterReplay = null;
+  then?.();
+}
+
+function autoReplay(matchWon) {
+  // Let the celebration and the announcer finish first.
+  const started = Date.now();
+  const wait = () => {
+    const talking = window.speechSynthesis?.speaking;
+    if ((talking && Date.now() - started < 9000) || Date.now() - started < 2500) return setTimeout(wait, 300);
+    showReplay(matchWon ? showWinner : null);
+  };
+  setTimeout(wait, 300);
 }
 
 function undo() {
@@ -582,6 +678,19 @@ function bind() {
     actions[btn.dataset.action]?.();
   });
   $('#toggle-help').addEventListener('click', () => { settings.help = !settings.help; saveSettings(); render(); });
+  $('#toggle-camera').addEventListener('click', () => {
+    settings.camera = !cameraOn();
+    saveSettings();
+    syncCamera();
+    toast(settings.camera ? 'Camera on: tap REPLAY to see the last shot' : 'Camera off', true);
+  });
+  $('#replay-btn').addEventListener('click', () => showReplay());
+  $('#replay-close').addEventListener('click', closeReplay);
+  $('#replay-again').addEventListener('click', () => playClip(0));
+  $('#replay-slow').addEventListener('click', (e) => {
+    e.currentTarget.classList.toggle('on');
+    $('#replay-video').playbackRate = e.currentTarget.classList.contains('on') ? 0.5 : 1;
+  });
   $('#toggle-voice').addEventListener('click', () => {
     settings.voice = !settings.voice;
     saveSettings();
@@ -615,12 +724,12 @@ function bind() {
     readSetup();
     $('#setup').hidden = true;
     $('#game').hidden = false;
-    render();
+    syncCamera();
   });
 
   // Physical keyboard, handy on a PC or an iPad keyboard.
   document.addEventListener('keydown', (e) => {
-    if ($('#game').hidden || document.querySelector('dialog[open]')) return;
+    if ($('#game').hidden || !$('#replay').hidden || document.querySelector('dialog[open]')) return;
     if (/^\d$/.test(e.key)) pressKey(e.key);
     else if (e.key === 'Enter') enter();
     else if (e.key === 'Backspace') clearKey();
@@ -644,6 +753,7 @@ function init() {
     $('#setup').hidden = true;
     $('#game').hidden = false;
     render();
+    if (settings.camera) syncCamera();
   } else {
     showSetup();
   }
