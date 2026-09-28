@@ -24,7 +24,7 @@ const store = {
 const DEFAULT_SETTINGS = {
   mode: 'two', start: 501, names: ['', '', '', ''], legsPerSet: 3, setsToWin: 1,
   handicaps: [0, 0], help: true, voice: true,
-  camera: false, autoReplay: true, cameraFacing: 'user',
+  camera: false, autoReplay: true,
 };
 let settings = { ...DEFAULT_SETTINGS, ...store.get('darts.settings', {}) };
 const saveSettings = () => store.set('darts.settings', settings);
@@ -125,13 +125,13 @@ function renderSetupFields() {
   $('#start-field').hidden = practice;
   $('#match-field').hidden = practice;
   const sides = mode === 'doubles' ? 2 : count;
-  const hc = $('#handicap-row');
-  hc.innerHTML = '';
+  const hc = $('#match-row');
+  $$('.hc-field', hc).forEach((el) => el.remove());
   for (let s = 0; s < sides && !practice; s++) {
     const who = mode === 'doubles' ? (s === 0 ? 'Home team' : 'Away team') : `Player ${s + 1}`;
     const label = document.createElement('label');
-    label.className = 'field';
-    label.textContent = `Handicap: ${who} starts lower by`;
+    label.className = 'field hc-field';
+    label.textContent = `Handicap: ${who}`;
     const input = document.createElement('input');
     input.type = 'number';
     input.inputMode = 'numeric';
@@ -154,7 +154,6 @@ function fillSetup() {
   setupForm.voice.checked = settings.voice;
   setupForm.camera.checked = settings.camera;
   setupForm.autoReplay.checked = settings.autoReplay;
-  setupForm.cameraFacing.value = settings.cameraFacing;
   $('#camera-options').hidden = !cameraSupported();
   $$('#names input').forEach((i) => i.remove());
   renderSetupFields();
@@ -164,7 +163,7 @@ function readSetup() {
   const names = [...settings.names];
   $$('#names input').forEach((i) => { names[+i.dataset.index] = i.value.trim(); });
   const handicaps = [0, 0];
-  $$('#handicap-row input').forEach((i) => { handicaps[+i.dataset.hc] = Math.max(0, Math.min(400, Math.floor(+i.value || 0))); });
+  $$('#match-row [data-hc]').forEach((i) => { handicaps[+i.dataset.hc] = Math.max(0, Math.min(400, Math.floor(+i.value || 0))); });
   settings = {
     ...settings,
     mode: setupForm.mode.value,
@@ -177,7 +176,6 @@ function readSetup() {
     voice: setupForm.voice.checked,
     camera: setupForm.camera.checked,
     autoReplay: setupForm.autoReplay.checked,
-    cameraFacing: setupForm.cameraFacing.value,
   };
   saveSettings();
 }
@@ -469,8 +467,7 @@ async function syncCamera() {
   const preview = $('#cam-preview');
   if (settings.camera && cameraSupported() && !cameraOn()) {
     try {
-      await startCamera(settings.cameraFacing, preview);
-      preview.style.transform = settings.cameraFacing === 'user' ? 'scaleX(-1)' : 'none';
+      await startCamera('user', preview);
       preview.hidden = false;
     } catch (err) {
       settings.camera = false;
@@ -575,14 +572,19 @@ function openInfo(title, html) {
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
 function showAverages() {
-  const rows = state.players.map((p) => {
-    const st = stats(p);
-    return `<tr><td>${esc(p.name)}</td><td>${st.threeDart.toFixed(2)}</td><td>${st.perDart.toFixed(2)}</td>
-      <td>${p.legDarts}</td><td>${p.lastLegDarts ?? '–'}</td><td>${p.tons}</td><td>${p.oneEighties}</td><td>${p.highestCheckout || '–'}</td></tr>`;
-  }).join('');
-  let html = `<table class="stats-table"><thead><tr><th></th><th>3-dart avg</th><th>Per dart</th><th>Darts this leg</th>
-    <th>Darts last leg</th><th>100+</th><th>180s</th><th>Best out</th></tr></thead><tbody>${rows}</tbody></table>`;
-  if (state.practice) html = `<p>Checked out ${state.practice.hits} of ${state.practice.attempts} targets.</p>` + html;
+  const rows = [
+    ['3-dart average', (p) => stats(p).threeDart.toFixed(1)],
+    ['Per dart', (p) => stats(p).perDart.toFixed(1)],
+    ['Darts this leg', (p) => p.legDarts],
+    ['Darts last leg', (p) => p.lastLegDarts ?? '–'],
+    ['Scores of 100+', (p) => p.tons],
+    ['180s', (p) => p.oneEighties],
+    ['Best checkout', (p) => p.highestCheckout || '–'],
+  ];
+  const head = state.players.map((p, i) => `<th class="${i === state.turn ? 'now' : ''}">${esc(p.name)}</th>`).join('');
+  const body = rows.map(([label, fn]) => `<tr><th>${label}</th>${state.players.map((p) => `<td>${fn(p)}</td>`).join('')}</tr>`).join('');
+  let html = `<div class="table-scroll"><table class="stats-table"><thead><tr><th></th>${head}</tr></thead><tbody>${body}</tbody></table></div>`;
+  if (state.practice) html = `<p class="big-note">Checked out ${state.practice.hits} of ${state.practice.attempts} targets.</p>` + html;
   openInfo('Averages', html);
 }
 
@@ -652,6 +654,8 @@ function menuAction(name) {
   if (name === 'rematch') startMatch();
   else if (name === 'setup') showSetup();
   else if (name === 'outs') showOuts();
+  else if (name === 'quit') $('#dlg-quit').showModal();
+  else if (name === 'settings') { fillSetup(); $('#dlg-settings').showModal(); }
   else if (name === 'undo') undo();
   else if (name === 'fullscreen') toggleFullscreen();
 }
@@ -704,7 +708,22 @@ function bind() {
   $$('dialog').forEach((d) => d.addEventListener('click', (e) => { if (e.target === d && d.id !== 'dlg-winner') d.close(); }));
 
   $('#bg-file').addEventListener('change', (e) => { loadBackground(e.target.files[0]); e.target.value = ''; });
-  $('#bg-file-2').addEventListener('change', (e) => { loadBackground(e.target.files[0]); e.target.value = ''; $('#dlg-mode').close(); });
+  $('#quit-yes').addEventListener('click', () => {
+    $('#dlg-quit').close();
+    window.speechSynthesis?.cancel();
+    state = null;
+    undoStack = [];
+    lastScore = null;
+    clearEntry();
+    store.remove('darts.match');
+    showSetup();
+  });
+  $('#open-settings').addEventListener('click', () => $('#dlg-settings').showModal());
+  $('#dlg-settings').addEventListener('close', () => {
+    readSetup();
+    if (!$('#game').hidden) syncCamera();
+    render();
+  });
   $('#bg-clear').addEventListener('click', () => { store.remove('darts.bg'); applyBackground(); toast('Default background', true); });
 
   setupForm.addEventListener('change', (e) => {

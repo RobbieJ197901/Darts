@@ -112,11 +112,16 @@
   <!-- Game setup -->
   <main id="setup" class="setup">
     <form class="card" id="setup-form" autocomplete="off">
-      <h1>Darts Counter</h1>
+      <div class="setup-head">
+        <h1>Darts Counter</h1>
+        <button type="button" class="cog" id="open-settings" aria-label="Settings">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19.14 12.94a7.5 7.5 0 0 0 .05-.94 7.5 7.5 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.61-.22l-2.39.96a7.3 7.3 0 0 0-1.62-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.49.42l-.36 2.54c-.59.24-1.13.56-1.62.94l-2.39-.96a.5.5 0 0 0-.61.22L2.66 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.5 7.5 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.61.22l2.39-.96c.49.38 1.03.7 1.62.94l.36 2.54c.05.24.25.42.49.42h3.84c.25 0 .45-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.62-.94l2.39.96c.22.08.48 0 .61-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/></svg>
+        </button>
+      </div>
 
       <fieldset>
         <legend>Game</legend>
-        <div class="segmented" data-name="mode">
+        <div class="segmented modes" data-name="mode">
           <label><input type="radio" name="mode" value="solo"><span>Solo</span></label>
           <label><input type="radio" name="mode" value="two" checked><span>2 players</span></label>
           <label><input type="radio" name="mode" value="doubles"><span>Doubles</span></label>
@@ -126,7 +131,7 @@
 
       <fieldset id="start-field">
         <legend>Start from</legend>
-        <div class="segmented">
+        <div class="segmented starts">
           <label><input type="radio" name="start" value="501" checked><span>501</span></label>
           <label><input type="radio" name="start" value="401"><span>401</span></label>
           <label><input type="radio" name="start" value="301"><span>301</span></label>
@@ -142,7 +147,7 @@
 
       <fieldset id="match-field">
         <legend>Match</legend>
-        <div class="row">
+        <div class="row match-row" id="match-row">
           <label class="field">Legs to win a set
             <select name="legsPerSet"><option>1</option><option>2</option><option selected>3</option><option>4</option><option>5</option><option>6</option></select>
           </label>
@@ -150,28 +155,8 @@
             <select name="setsToWin"><option selected>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>7</option></select>
           </label>
         </div>
-        <div class="row" id="handicap-row"></div>
       </fieldset>
 
-      <fieldset>
-        <legend>Options</legend>
-        <label class="switch"><input type="checkbox" name="help" checked><span></span>“Help me” checkout suggestions</label>
-        <label class="switch"><input type="checkbox" name="voice" checked><span></span>Announcer voice</label>
-        <div id="camera-options">
-          <label class="switch"><input type="checkbox" name="camera"><span></span>Camera replay of the last shot and the crowd</label>
-          <div class="row camera-row">
-            <label class="switch"><input type="checkbox" name="autoReplay" checked><span></span>Replay 180s and game shots automatically</label>
-            <label class="field">Camera
-              <select name="cameraFacing"><option value="user">Front (faces the players)</option><option value="environment">Back</option></select>
-            </label>
-          </div>
-          <p class="note">Footage stays on this iPad and only the last few seconds are kept.</p>
-        </div>
-        <div class="row bg-row">
-          <label class="btn ghost file-btn">Choose background image<input type="file" accept="image/*" id="bg-file" hidden></label>
-          <button type="button" class="btn ghost" id="bg-clear">Use default background</button>
-        </div>
-      </fieldset>
 
       <div class="setup-actions">
         <button type="button" class="btn ghost" id="resume" hidden>Back to current game</button>
@@ -181,6 +166,28 @@
   </main>
 
   <!-- Pop-ups -->
+  <dialog id="dlg-settings" class="dlg settings">
+    <div class="dlg-head">
+      <h2>Settings</h2>
+      <button type="button" class="btn green pill" data-close>Done</button>
+    </div>
+    <div class="settings-list">
+      <label class="switch"><input type="checkbox" form="setup-form" name="help" checked><span></span>“Help me” checkout suggestions</label>
+      <label class="switch"><input type="checkbox" form="setup-form" name="voice" checked><span></span>Announcer voice</label>
+      <div id="camera-options" class="settings-group">
+        <label class="switch"><input type="checkbox" form="setup-form" name="camera"><span></span>Camera replay of the last shot and the crowd</label>
+        <label class="switch"><input type="checkbox" form="setup-form" name="autoReplay" checked><span></span>Replay 180s and game shots automatically</label>
+        <p class="note">Uses the front camera. Footage stays on this device and only the last few seconds are kept.</p>
+      </div>
+      <div class="settings-group">
+        <div class="setting-label">Background</div>
+        <div class="bg-row">
+          <label class="btn green file-btn">Choose background image<input type="file" accept="image/*" id="bg-file" hidden></label>
+          <button type="button" class="btn ghost" id="bg-clear">Use default background</button>
+        </div>
+      </div>
+    </div>
+  </dialog>
   <dialog id="dlg-darts" class="dlg">
     <h2>Game shot! How many darts?</h2>
     <p>Used to work out your averages.</p>
@@ -192,22 +199,33 @@
     <button type="button" class="btn ghost" data-close>Cancel</button>
   </dialog>
 
-  <dialog id="dlg-info" class="dlg wide">
-    <h2 id="info-title"></h2>
+  <dialog id="dlg-info" class="dlg full">
+    <div class="dlg-head">
+      <h2 id="info-title"></h2>
+      <button type="button" class="btn green pill" data-close>Close</button>
+    </div>
     <div id="info-body"></div>
-    <button type="button" class="btn green pill" data-close>Close</button>
   </dialog>
 
   <dialog id="dlg-mode" class="dlg">
     <h2>Menu</h2>
     <div class="menu">
       <button type="button" class="btn green" data-menu="rematch">New game, same players</button>
-      <button type="button" class="btn green" data-menu="setup">Change game settings</button>
+      <button type="button" class="btn green" data-menu="quit">Quit game</button>
+      <button type="button" class="btn green" data-menu="settings">Settings</button>
       <button type="button" class="btn green" data-menu="outs">Checkout table</button>
-      <label class="btn green file-btn">Change background<input type="file" accept="image/*" id="bg-file-2" hidden></label>
       <button type="button" class="btn green" data-menu="fullscreen" id="menu-fullscreen">Full screen</button>
     </div>
     <button type="button" class="btn ghost" data-close>Close</button>
+  </dialog>
+
+  <dialog id="dlg-quit" class="dlg">
+    <h2>Quit this game?</h2>
+    <p>The scores will be lost and you'll go back to the start screen to pick new players.</p>
+    <div class="menu">
+      <button type="button" class="btn green" id="quit-yes">Quit game</button>
+      <button type="button" class="btn ghost" data-close>Keep playing</button>
+    </div>
   </dialog>
 
   <dialog id="dlg-winner" class="dlg">
