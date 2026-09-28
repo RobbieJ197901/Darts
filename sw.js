@@ -1,5 +1,5 @@
 // Keeps the app working offline once it has been opened.
-const CACHE = 'darts-v3';
+const CACHE = 'darts-v4';
 const FILES = [
   './', 'index.html', 'css/style.css', 'manifest.webmanifest',
   'js/app.js', 'js/game.js', 'js/checkouts.js', 'js/led.js', 'js/voice.js', 'js/replay.js', 'img/background.jpg',
