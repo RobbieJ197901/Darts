@@ -18,6 +18,7 @@ A darts scoreboard for the iPad, styled like a classic electronic scorer: red LE
 - H/C sets a handicap (points taken off a player's starting score).
 - Camera replay: keeps the last few seconds from the iPad camera and plays back the last shot and the crowd's reaction, automatically after 180s and game shots or with the REPLAY button. Footage never leaves the iPad.
 - Custom background image, remembered on the device.
+- Works on iPhone and iPad. Landscape uses the classic scoreboard layout; portrait stacks the scores above a large keypad.
 
 ## Installing on an iPad
 
