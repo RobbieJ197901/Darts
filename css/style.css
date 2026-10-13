@@ -375,20 +375,20 @@ body {
 .splash.done { opacity: 0; pointer-events: none; }
 .splash-logo {
   position: relative;
-  width: min(92vw, 125vh);
-  aspect-ratio: 3 / 2;
+  width: min(82vw, 80vh);
+  aspect-ratio: 1;
   animation: logo-in 0.9s cubic-bezier(0.2, 1.4, 0.4, 1) both, logo-nod 0.8s ease-in-out 1.3s 2;
   transform-origin: 50% 70%;
 }
 .splash-logo img { width: 100%; height: 100%; display: block; filter: drop-shadow(0 0 40px rgba(40, 120, 255, 0.5)); }
 .eyelid {
   position: absolute;
-  left: 53.6%;
-  top: 17.5%;
-  width: 3%;
-  height: 3.4%;
+  left: 48%;
+  top: 19%;
+  width: 5.1%;
+  height: 4.3%;
   border-radius: 50% 50% 45% 45%;
-  background: radial-gradient(ellipse at 50% 30%, #dca35e, #b0702f);
+  background: radial-gradient(ellipse at 50% 30%, #eab055, #c98535);
   border-bottom: 2px solid #2a1606;
   transform: scaleY(0);
   transform-origin: 50% 0;
