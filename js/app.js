@@ -817,7 +817,6 @@ function playIntro() {
     setTimeout(() => splash.remove(), 1000);
   };
   splash.addEventListener('click', finish);
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   setTimeout(finish, 5000);
 }
 
