@@ -818,7 +818,7 @@ function playIntro() {
   };
   splash.addEventListener('click', finish);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  setTimeout(finish, reduced ? 1200 : 3400);
+  setTimeout(finish, 5000);
 }
 
 function init() {
